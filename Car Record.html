@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกการเข้า-ออกรถยนต์บริษัท</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ===== Custom Styles ===== -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        .btn-primary { background: linear-gradient(135deg, #a0e7e5 0%, #ffaebc 100%); transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(160, 231, 229, 0.4); }
+        .btn-secondary { background: linear-gradient(135deg, #ffaebc 0%, #a0e7e5 100%); transition: all 0.3s ease; }
+        .btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(255, 174, 188, 0.4); }
+        .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(160, 231, 229, 0.2); transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); }
+        .input-field { border: 2px solid #a0e7e5; transition: all 0.3s ease; }
+        .input-field:focus { border-color: #ffaebc; box-shadow: 0 0 0 3px rgba(255, 174, 188, 0.1); }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .dropdown-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background-color 0.2s ease; }
+        .dropdown-item:hover { background-color: #f8f9fa; }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item.selected { background-color: #a0e7e5; color: white; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div class="container mx-auto px-4 py-8">
+        <!-- ===== Header ===== -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">🚗 ระบบบันทึกการเข้า-ออกรถยนต์บริษัท</h1>
+            <p class="text-gray-600">สำหรับเจ้าหน้าที่รักษาความปลอดภัย</p>
+        </div>
+
+        <!-- ===== Navigation Buttons ===== -->
+        <div class="flex justify-center gap-4 mb-8">
+            <button id="exitBtn" class="btn-primary px-8 py-3 rounded-full text-white font-semibold shadow-lg">
+                🚗➡️ บันทึกรถออก
+            </button>
+            <button id="entryBtn" class="btn-secondary px-8 py-3 rounded-full text-white font-semibold shadow-lg">
+                ➡️🚗 บันทึกรถเข้า
+            </button>
+            <button id="refreshBtn" class="bg-gray-500 hover:bg-gray-600 px-6 py-3 rounded-full text-white font-semibold shadow-lg transition-all duration-300">
+                🔄 รีเฟรช
+            </button>
+        </div>
+
+        <!-- ===== Exit Form ===== -->
+        <div id="exitForm" class="card max-w-2xl mx-auto p-8 rounded-2xl shadow-xl fade-in">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">📝 บันทึกรถออก</h2>
+            <form id="exitFormData" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">ป้ายทะเบียน</label>
+                    <div class="relative">
+                        <input type="text" id="exitLicensePlateInput" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="พิมพ์หรือเลือกป้ายทะเบียน..." autocomplete="off" required>
+                        <div id="exitDropdownList" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"></div>
+                        <input type="hidden" id="exitLicensePlate" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">ชื่อผู้ใช้งาน</label>
+                    <div class="relative">
+                        <input type="text" id="exitUserInput" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="พิมพ์หรือเลือกชื่อผู้ใช้งาน..." autocomplete="off" required>
+                        <div id="exitUserDropdownList" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"></div>
+                        <input type="hidden" id="exitUser" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">วันที่</label>
+                        <input type="date" id="exitDate" class="input-field w-full px-4 py-3 rounded-lg bg-gray-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">เวลาออก</label>
+                        <input type="time" id="exitTime" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">เหตุผลในการใช้งาน</label>
+                    <textarea id="exitReason" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" rows="3" placeholder="ระบุเหตุผลในการใช้รถ..." required></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">เลขไมล์ขาออก (กม.)</label>
+                        <input type="number" id="exitMileage" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="0" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">ค่าพลังงานขาออก (%)</label>
+                        <input type="number" id="exitEnergy" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="0" min="0" max="100" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary w-full py-4 rounded-lg text-white font-semibold text-lg shadow-lg">
+                    <span id="exitSubmitText">💾 บันทึกข้อมูลรถออก</span>
+                    <div id="exitLoading" class="loading hidden"></div>
+                </button>
+            </form>
+        </div>
+
+        <!-- ===== Entry Form ===== -->
+        <div id="entryForm" class="card max-w-2xl mx-auto p-8 rounded-2xl shadow-xl fade-in hidden">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">📝 บันทึกรถเข้า</h2>
+            <form id="entryFormData" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">ป้ายทะเบียน</label>
+                    <div class="relative">
+                        <input type="text" id="entryLicensePlateInput" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="พิมพ์หรือเลือกป้ายทะเบียน..." autocomplete="off" required>
+                        <div id="entryDropdownList" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"></div>
+                        <input type="hidden" id="entryLicensePlate" required>
+                    </div>
+                </div>
+                <!-- ===== Last Trip Info ===== -->
+                <div id="lastTripInfo" class="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border-l-4 border-blue-400 shadow-sm hidden">
+                    <div class="flex items-center mb-3">
+                        <div class="bg-blue-100 p-2 rounded-full mr-3">
+                            <span class="text-blue-600 text-lg">🚗</span>
+                        </div>
+                        <h3 class="font-bold text-blue-800 text-lg">ข้อมูลการออกล่าสุด</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="bg-white p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">วันที่ออก</p>
+                            <p class="text-sm font-semibold text-blue-700"><span id="lastDate">-</span></p>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">เวลาออก</p>
+                            <p class="text-sm font-semibold text-blue-700"><span id="lastTime">-</span></p>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">ไมล์ออก</p>
+                            <p class="text-sm font-semibold text-blue-700"><span id="lastMileage">-</span> กม.</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">พลังงานออก</p>
+                            <p class="text-sm font-semibold text-blue-700"><span id="lastEnergy">-</span> %</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 bg-white p-3 rounded-lg">
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">เหตุผลในการใช้งาน</p>
+                        <p class="text-sm font-semibold text-blue-700"><span id="lastReason">-</span></p>
+                    </div>
+                    <div class="mt-4 bg-white p-3 rounded-lg">
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">ชื่อผู้ใช้งาน</p>
+                        <p class="text-sm font-semibold text-blue-700"><span id="lastUser">-</span></p>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between bg-amber-50 p-3 rounded-lg border border-amber-200">
+                        <div class="flex items-center">
+                            <span class="text-amber-600 mr-2">⏱️</span>
+                            <span class="text-sm text-amber-700 font-medium">เวลาที่ออกไปแล้ว:</span>
+                        </div>
+                        <span class="text-sm font-bold text-amber-800" id="timeAgo">-</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">วันที่เข้า</label>
+                        <input type="date" id="entryDate" class="input-field w-full px-4 py-3 rounded-lg bg-gray-100" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">เวลาเข้า</label>
+                        <input type="time" id="entryTime" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">เลขไมล์ขาเข้า (กม.)</label>
+                        <input type="number" id="entryMileage" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="0" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">ค่าพลังงานขาเข้า (%)</label>
+                        <input type="number" id="entryEnergy" class="input-field w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="0" min="0" max="100" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-secondary w-full py-4 rounded-lg text-white font-semibold text-lg shadow-lg">
+                    <span id="entrySubmitText">💾 บันทึกข้อมูลรถเข้า</span>
+                    <div id="entryLoading" class="loading hidden"></div>
+                </button>
+            </form>
+        </div>
+
+        <!-- ===== Status Messages ===== -->
+        <div id="statusMessage" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg hidden z-50"></div>
+    </div>
+
+    <!-- ===== Main Application Script ===== -->
+    <script>
+        // ===== 1. Configuration & Global Variables =====
+        const SHEET_ID = '1GaWA8U08NMhCKZ3vezX5rs03CWIoopiv9nP_Zhk9iTM';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZ1JEtRxv_jIlbpu1j_6eLL47nlLAA9V7adi2Z1KDy0qqFVTf1VhDQBiQAT7yRFDuJ/exec';
+        
+        // ✅ Data Cache Manager
+        class DataCacheManager {
+            constructor() {
+                this.cache = new Map();
+                this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+            }
+            
+            set(key, data) {
+                this.cache.set(key, {
+                    data: data,
+                    timestamp: Date.now()
+                });
+                // เก็บใน localStorage สำหรับ offline
+                try {
+                    localStorage.setItem(`cache_${key}`, JSON.stringify({
+                        data: data,
+                        timestamp: Date.now()
+                    }));
+                } catch (error) {
+                    console.warn('Failed to save to localStorage:', error);
+                }
+            }
+            
+            get(key) {
+                const cached = this.cache.get(key);
+                if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
+                    return cached.data;
+                }
+                
+                // ลองดึงจาก localStorage
+                try {
+                    const stored = localStorage.getItem(`cache_${key}`);
+                    if (stored) {
+                        const parsedData = JSON.parse(stored);
+                        if ((Date.now() - parsedData.timestamp) < this.cacheTimeout) {
+                            this.cache.set(key, parsedData);
+                            return parsedData.data;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to load from localStorage:', error);
+                }
+                
+                return null;
+            }
+            
+            isExpired(key) {
+                const cached = this.cache.get(key);
+                return !cached || (Date.now() - cached.timestamp) >= this.cacheTimeout;
+            }
+            
+            clear(key = null) {
+                if (key) {
+                    this.cache.delete(key);
+                    localStorage.removeItem(`cache_${key}`);
+                } else {
+                    this.cache.clear();
+                    // Clear all cache items from localStorage
+                    Object.keys(localStorage).forEach(key => {
+                        if (key.startsWith('cache_')) {
+                            localStorage.removeItem(key);
+                        }
+                    });
+                }
+            }
+        }
+
+        // ✅ Network Manager with Retry Logic
+        class NetworkManager {
+            constructor() {
+                this.activeRequests = new Map();
+                this.retryAttempts = 3;
+                this.retryDelay = 1000;
+            }
+            
+            async fetchWithRetry(url, options = {}) {
+                // ป้องกัน duplicate requests
+                if (this.activeRequests.has(url)) {
+                    return this.activeRequests.get(url);
+                }
+                
+                const requestPromise = this._performRequest(url, options);
+                this.activeRequests.set(url, requestPromise);
+                
+                try {
+                    const result = await requestPromise;
+                    return result;
+                } finally {
+                    this.activeRequests.delete(url);
+                }
+            }
+            
+            async _performRequest(url, options, attempt = 1) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                    
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    return await response.text();
+                } catch (error) {
+                    if (attempt < this.retryAttempts && error.name !== 'AbortError') {
+                        console.warn(`Request failed (attempt ${attempt}/${this.retryAttempts}):`, error.message);
+                        await this._delay(this.retryDelay * attempt);
+                        return this._performRequest(url, options, attempt + 1);
+                    }
+                    throw error;
+                }
+            }
+            
+            _delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // ✅ Vehicle State Manager
+        class VehicleStateManager {
+            constructor() {
+                this.vehicles = new Map();
+                this.listeners = new Set();
+                this.lastUpdate = null;
+            }
+            
+            updateVehicle(plate, data) {
+                const existing = this.vehicles.get(plate) || {};
+                const updated = { ...existing, ...data, lastModified: Date.now() };
+                this.vehicles.set(plate, updated);
+                this._notifyListeners('vehicleUpdated', { plate, data: updated });
+                this.saveToStorage();
+            }
+            
+            getVehicle(plate) {
+                return this.vehicles.get(plate);
+            }
+            
+            getVehiclesByStatus(status) {
+                return Array.from(this.vehicles.entries())
+                    .filter(([plate, data]) => data.status === status)
+                    .map(([plate, data]) => ({ plate, ...data }));
+            }
+            
+            getAllVehicles() {
+                return Array.from(this.vehicles.entries())
+                    .map(([plate, data]) => ({ plate, ...data }));
+            }
+            
+            subscribe(callback) {
+                this.listeners.add(callback);
+                return () => this.listeners.delete(callback);
+            }
+            
+            _notifyListeners(event, data) {
+                this.listeners.forEach(callback => {
+                    try {
+                        callback(event, data);
+                    } catch (error) {
+                        console.error('Listener error:', error);
+                    }
+                });
+            }
+            
+            // เก็บข้อมูลใน localStorage
+            saveToStorage() {
+                try {
+                    const data = {
+                        vehicles: Array.from(this.vehicles.entries()),
+                        lastUpdate: this.lastUpdate
+                    };
+                    localStorage.setItem('vehicleState', JSON.stringify(data));
+                } catch (error) {
+                    console.warn('Failed to save vehicle state:', error);
+                }
+            }
+            
+            loadFromStorage() {
+                try {
+                    const stored = localStorage.getItem('vehicleState');
+                    if (stored) {
+                        const data = JSON.parse(stored);
+                        this.vehicles = new Map(data.vehicles);
+                        this.lastUpdate = data.lastUpdate;
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Error loading from storage:', error);
+                }
+                return false;
+            }
+        }
+
+        // ✅ UI State Manager
+        class UIStateManager {
+            constructor() {
+                this.loadingStates = new Map();
+                this.errorStates = new Map();
+            }
+            
+            setLoading(component, isLoading, message = '') {
+                this.loadingStates.set(component, { isLoading, message });
+                this._updateLoadingUI(component, isLoading, message);
+            }
+            
+            setError(component, error, duration = 5000) {
+                this.errorStates.set(component, error);
+                this._showError(component, error);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.clearError(component);
+                    }, duration);
+                }
+            }
+            
+            clearError(component) {
+                this.errorStates.delete(component);
+                this._hideError(component);
+            }
+            
+            _updateLoadingUI(component, isLoading, message) {
+                const loadingEl = document.getElementById(`${component}Loading`);
+                const textEl = document.getElementById(`${component}SubmitText`);
+                
+                if (loadingEl && textEl) {
+                    if (isLoading) {
+                        loadingEl.classList.remove('hidden');
+                        textEl.classList.add('hidden');
+                        if (message) textEl.textContent = message;
+                    } else {
+                        loadingEl.classList.add('hidden');
+                        textEl.classList.remove('hidden');
+                    }
+                }
+            }
+            
+            _showError(component, error) {
+                this.showStatus(`❌ ${error}`, 'error');
+            }
+            
+            _hideError(component) {
+                // Hide error UI if needed
+            }
+            
+            showStatus(message, type = 'info', duration = 3000) {
+                const statusEl = document.getElementById('statusMessage');
+                if (!statusEl) return;
+                
+                const colors = {
+                    success: 'bg-green-500 text-white',
+                    error: 'bg-red-500 text-white',
+                    warning: 'bg-yellow-500 text-black',
+                    info: 'bg-blue-500 text-white'
+                };
+                
+                statusEl.textContent = message;
+                statusEl.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${colors[type] || colors.info}`;
+                statusEl.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    statusEl.classList.add('hidden');
+                }, duration);
+            }
+        }
+
+        // ✅ Input Validation Utils
+        class ValidationUtils {
+            static validateLicensePlate(plate) {
+                if (!plate || typeof plate !== 'string') {
+                    return { valid: false, error: 'ป้ายทะเบียนไม่ถูกต้อง' };
+                }
+                
+                const trimmed = plate.trim();
+                if (trimmed.length < 2) {
+                    return { valid: false, error: 'ป้ายทะเบียนสั้นเกินไป' };
+                }
+                
+                return { valid: true, value: trimmed };
+            }
+            
+            static validateMileage(mileage, lastMileage = null) {
+                const num = parseFloat(mileage);
+                
+                if (isNaN(num) || num < 0) {
+                    return { valid: false, error: 'เลขไมล์ต้องเป็นตัวเลขที่มากกว่าหรือเท่ากับ 0' };
+                }
+                
+                if (lastMileage !== null && num < lastMileage) {
+                    return { 
+                        valid: false, 
+                        error: `เลขไมล์ต้องมากกว่าหรือเท่ากับไมล์ล่าสุด (${lastMileage} กม.)` 
+                    };
+                }
+                
+                return { valid: true, value: num };
+            }
+            
+            static validateEnergy(energy) {
+                const num = parseFloat(energy);
+                
+                if (isNaN(num) || num < 0 || num > 100) {
+                    return { valid: false, error: 'ค่าพลังงานต้องอยู่ระหว่าง 0-100%' };
+                }
+                
+                return { valid: true, value: num };
+            }
+            
+            static sanitizeInput(input) {
+                if (typeof input !== 'string') return input;
+                
+                return input
+                    .trim()
+                    .replace(/[<>]/g, '') // Remove potential HTML tags
+                    .substring(0, 1000); // Limit length
+            }
+        }
+
+        // ✅ Date/Time Utilities
+        class DateTimeUtils {
+            static formatDateThai(dateInput) {
+                if (!dateInput) return '-';
+                
+                try {
+                    let date;
+                    
+                    // Handle Google Sheets Date constructor format
+                    if (typeof dateInput === 'string' && dateInput.includes('Date(')) {
+                        const match = dateInput.match(/Date\((\d+),(\d+),(\d+)\)/);
+                        if (match) {
+                            date = new Date(
+                                parseInt(match[1]), 
+                                parseInt(match[2]), // Google Sheets months are 0-based
+                                parseInt(match[3])
+                            );
+                        }
+                    } else if (dateInput instanceof Date) {
+                        date = dateInput;
+                    } else {
+                        date = new Date(dateInput);
+                    }
+                    
+                    if (isNaN(date.getTime())) {
+                        throw new Error('Invalid date');
+                    }
+                    
+                    const day = date.getDate();
+                    const month = date.getMonth() + 1;
+                    const year = date.getFullYear();
+                    
+                    return `${day}/${month}/${year}`;
+                } catch (error) {
+                    console.error('Date formatting error:', error, 'Input:', dateInput);
+                    return String(dateInput);
+                }
+            }
+            
+            static formatTimeThai(timeInput) {
+                if (!timeInput) return '-';
+                
+                try {
+                    let date;
+                    
+                    // Handle Google Sheets time formats
+                    if (typeof timeInput === 'string' && timeInput.includes('Date(')) {
+                        const match = timeInput.match(/Date\(\d+,\d+,\d+,(\d+),(\d+),(\d+)\)/);
+                        if (match) {
+                            date = new Date();
+                            date.setHours(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
+                        }
+                    } else if (typeof timeInput === 'number' && timeInput >= 0 && timeInput <= 1) {
+                        // Handle decimal time format
+                        const totalMinutes = Math.round(timeInput * 24 * 60);
+                        const hours = Math.floor(totalMinutes / 60);
+                        const minutes = totalMinutes % 60;
+                        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                    } else {
+                        date = new Date(timeInput);
+                    }
+                    
+                    if (isNaN(date.getTime())) {
+                        throw new Error('Invalid time');
+                    }
+                    
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    
+                    return `${hours}:${minutes}`;
+                } catch (error) {
+                    console.error('Time formatting error:', error, 'Input:', timeInput);
+                    return String(timeInput);
+                }
+            }
+            
+            static calculateTimeDifference(startTime, endTime = new Date()) {
+                const diff = endTime - new Date(startTime);
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                
+                if (hours > 0) {
+                    return `${hours} ชั่วโมง ${minutes} นาที`;
+                } else {
+                    return `${minutes} นาที`;
+                }
+            }
+        }
+
+        // ✅ Google Sheets Manager
+        class GoogleSheetsManager {
+            constructor(sheetId, scriptUrl) {
+                this.sheetId = sheetId;
+                this.scriptUrl = scriptUrl;
+                this.requestQueue = [];
+                this.isProcessing = false;
+            }
+            
+            async getData(sheetName, useCache = true) {
+                const cacheKey = `sheet_${sheetName}`;
+                
+                if (useCache) {
+                    const cached = dataCache.get(cacheKey);
+                    if (cached) {
+                        console.log(`Using cached data for ${sheetName}`);
+                        return cached;
+                    }
+                }
+                
+                const url = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+                
+                try {
+                    uiManager.showStatus(`📋 กำลังโหลดข้อมูล ${sheetName}...`, 'info');
+                    const response = await networkManager.fetchWithRetry(url);
+                    const jsonData = JSON.parse(response.substr(47).slice(0, -2));
+                    
+                    const processedData = this._processSheetData(jsonData);
+                    
+                    if (useCache) {
+                        dataCache.set(cacheKey, processedData);
+                    }
+                    
+                    return processedData;
+                } catch (error) {
+                    console.error(`Error fetching sheet ${sheetName}:`, error);
+                    
+                    // Try to return cached data if available
+                    const cached = dataCache.get(cacheKey);
+                    if (cached) {
+                        console.warn('Using cached data due to network error');
+                        uiManager.showStatus(`⚠️ ใช้ข้อมูลที่เก็บไว้สำหรับ ${sheetName}`, 'warning');
+                        return cached;
+                    }
+                    
+                    throw error;
+                }
+            }
+            
+            async submitData(data) {
+                return new Promise((resolve, reject) => {
+                    // Add to queue to prevent concurrent submissions
+                    this.requestQueue.push({ data, resolve, reject });
+                    this._processQueue();
+                });
+            }
+            
+            async _processQueue() {
+                if (this.isProcessing || this.requestQueue.length === 0) return;
+                
+                this.isProcessing = true;
+                
+                while (this.requestQueue.length > 0) {
+                    const { data, resolve, reject } = this.requestQueue.shift();
+                    
+                    try {
+                        const result = await this._submitToScript(data);
+                        resolve(result);
+                    } catch (error) {
+                        reject(error);
+                    }
+                    
+                    // Small delay between requests
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                this.isProcessing = false;
+            }
+            
+            _processSheetData(jsonData) {
+                if (!jsonData.table || !jsonData.table.rows) {
+                    return [];
+                }
+                
+                return jsonData.table.rows.map(row => {
+                    const processedRow = {};
+                    if (row.c) {
+                        row.c.forEach((cell, index) => {
+                            processedRow[`col${index}`] = cell ? cell.v : null;
+                        });
+                    }
+                    return processedRow;
+                });
+            }
+            
+            async _submitToScript(data) {
+                const callbackName = `callback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    const timeoutId = setTimeout(() => {
+                        cleanup();
+                        reject(new Error('Request timeout'));
+                    }, 15000);
+                    
+                    const cleanup = () => {
+                        clearTimeout(timeoutId);
+                        if (script.parentNode) {
+                            script.parentNode.removeChild(script);
+                        }
+                        delete window[callbackName];
+                    };
+                    
+                    window[callbackName] = (response) => {
+                        cleanup();
+                        if (response && response.success) {
+                            resolve(response);
+                        } else {
+                            reject(new Error(response ? response.error : 'Unknown error'));
+                        }
+                    };
+                    
+                    const params = new URLSearchParams();
+                    Object.keys(data).forEach(key => {
+                        params.append(key, ValidationUtils.sanitizeInput(data[key]));
+                    });
+                    params.append('callback', callbackName);
+                    
+                    script.src = `${this.scriptUrl}?${params.toString()}`;
+                    script.onerror = () => {
+                        cleanup();
+                        reject(new Error('Network error'));
+                    };
+                    
+                    document.head.appendChild(script);
+                });
+            }
+        }
+
+        // Initialize managers
+        const dataCache = new DataCacheManager();
+        const networkManager = new NetworkManager();
+        const vehicleStateManager = new VehicleStateManager();
+        const uiManager = new UIStateManager();
+        const sheetsManager = new GoogleSheetsManager(SHEET_ID, SCRIPT_URL);
+        
+        // Global variables (legacy compatibility)
+        let licensePlates = [];
+        let vehicleStatus = {}; // Track which vehicles are in/out
+        let lastTripData = {}; // Store last trip data for each vehicle
+        let userList = []; // รายชื่อผู้ใช้งาน
+
+        // DOM Elements
+        const exitBtn = document.getElementById('exitBtn');
+        const entryBtn = document.getElementById('entryBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const exitForm = document.getElementById('exitForm');
+        const entryForm = document.getElementById('entryForm');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // ✅ Enhanced Initialization
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Initializing Enhanced Vehicle Management System...');
+            
+            try {
+                // Load from storage first for faster startup
+                const hasStoredData = vehicleStateManager.loadFromStorage();
+                if (hasStoredData) {
+                    console.log('📦 Loaded vehicle state from storage');
+                    uiManager.showStatus('📦 โหลดข้อมูลที่เก็บไว้...', 'info', 1000);
+                }
+                
+                setCurrentDateTime();
+                
+                // Load data with improved error handling
+                await loadLicensePlatesEnhanced();
+                
+                // Event listeners
+                exitBtn.addEventListener('click', showExitForm);
+                entryBtn.addEventListener('click', showEntryForm);
+                refreshBtn.addEventListener('click', refreshDataEnhanced);
+                
+                document.getElementById('exitFormData').addEventListener('submit', handleExitSubmitEnhanced);
+                document.getElementById('entryFormData').addEventListener('submit', handleEntrySubmitEnhanced);
+                
+                // Setup searchable dropdowns
+                setupSearchableDropdown('exit');
+                setupSearchableDropdown('entry');
+                
+                // Listen for license plate changes to show last trip info
+                document.getElementById('entryLicensePlate').addEventListener('change', showLastTripInfo);
+                
+                // Subscribe to vehicle state changes
+                vehicleStateManager.subscribe((event, data) => {
+                    console.log('Vehicle state changed:', event, data);
+                    updateDropdowns();
+                    updateStatusDisplay();
+                });
+                
+                // Start auto refresh with enhanced logic
+                startAutoRefreshEnhanced();
+                
+                // Show welcome message
+                setTimeout(() => {
+                    uiManager.showStatus('🎉 ระบบพร้อมใช้งาน - ข้อมูลจะอัปเดตอัตโนมัติทุก 5 นาที', 'success');
+                }, 2000);
+                
+                console.log('✅ Enhanced system initialized successfully');
+                
+            } catch (error) {
+                console.error('❌ System initialization failed:', error);
+                uiManager.showStatus('❌ เกิดข้อผิดพลาดในการเริ่มต้นระบบ กรุณารีเฟรชหน้าเว็บ', 'error', 10000);
+            }
+        });
+
+        // Setup searchable dropdown functionality
+        function setupSearchableDropdown(type) {
+            const input = document.getElementById(`${type}LicensePlateInput`);
+            const hiddenInput = document.getElementById(`${type}LicensePlate`);
+            const dropdownList = document.getElementById(`${type}DropdownList`);
+            
+            let selectedIndex = -1;
+            let filteredOptions = [];
+            
+            // Input event for filtering
+            input.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                hiddenInput.value = ''; // Clear hidden value when typing
+                
+                // Filter license plates based on search term
+                const availablePlates = licensePlates.filter(vehicle => {
+                    const statusKey = type === 'exit' ? 'in' : 'out';
+                    return vehicleStatus[vehicle.plate] === statusKey;
+                });
+                
+                filteredOptions = availablePlates.filter(vehicle => 
+                    vehicle.display.toLowerCase().includes(searchTerm) ||
+                    vehicle.plate.toLowerCase().includes(searchTerm)
+                );
+                
+                selectedIndex = -1;
+                updateDropdownList(type, filteredOptions, searchTerm);
+                
+                if (searchTerm && filteredOptions.length > 0) {
+                    dropdownList.classList.remove('hidden');
+                } else if (!searchTerm) {
+                    dropdownList.classList.add('hidden');
+                }
+            });
+            
+            // Focus event to show all options
+            input.addEventListener('focus', function() {
+                const availablePlates = licensePlates.filter(vehicle => {
+                    const statusKey = type === 'exit' ? 'in' : 'out';
+                    return vehicleStatus[vehicle.plate] === statusKey;
+                });
+                
+                filteredOptions = availablePlates;
+                selectedIndex = -1;
+                updateDropdownList(type, filteredOptions, '');
+                
+                if (filteredOptions.length > 0) {
+                    dropdownList.classList.remove('hidden');
+                }
+            });
+            
+            // Keyboard navigation
+            input.addEventListener('keydown', function(e) {
+                if (filteredOptions.length === 0) return;
+                
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, filteredOptions.length - 1);
+                        updateDropdownSelection(type);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, -1);
+                        updateDropdownSelection(type);
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        if (selectedIndex >= 0) {
+                            selectOption(type, filteredOptions[selectedIndex]);
+                        }
+                        break;
+                    case 'Escape':
+                        dropdownList.classList.add('hidden');
+                        selectedIndex = -1;
+                        break;
+                }
+            });
+            
+            // Click outside to close
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !dropdownList.contains(e.target)) {
+                    dropdownList.classList.add('hidden');
+                    selectedIndex = -1;
+                }
+            });
+        }
+        
+        // Update dropdown list display
+        function updateDropdownList(type, options, searchTerm) {
+            const dropdownList = document.getElementById(`${type}DropdownList`);
+            dropdownList.innerHTML = '';
+            
+            if (options.length === 0 && searchTerm) {
+                const noResultItem = document.createElement('div');
+                noResultItem.className = 'dropdown-item text-gray-500';
+                noResultItem.textContent = 'ไม่พบป้ายทะเบียนที่ค้นหา';
+                dropdownList.appendChild(noResultItem);
+                return;
+            }
+            
+            options.forEach((vehicle, index) => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = vehicle.display;
+                item.addEventListener('click', () => selectOption(type, vehicle));
+                dropdownList.appendChild(item);
+            });
+        }
+        
+        // Update dropdown selection highlight
+        function updateDropdownSelection(type) {
+            const dropdownList = document.getElementById(`${type}DropdownList`);
+            const items = dropdownList.querySelectorAll('.dropdown-item');
+            
+            items.forEach((item, index) => {
+                if (index === selectedIndex) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+        
+        // Select an option from dropdown
+        function selectOption(type, vehicle) {
+            const input = document.getElementById(`${type}LicensePlateInput`);
+            const hiddenInput = document.getElementById(`${type}LicensePlate`);
+            const dropdownList = document.getElementById(`${type}DropdownList`);
+            
+            input.value = vehicle.display;
+            hiddenInput.value = vehicle.plate;
+            dropdownList.classList.add('hidden');
+            
+            // เรียก fetchAndShowLastTripInfo แบบ real-time เฉพาะ entry
+            if (type === 'entry') {
+                fetchAndShowLastTripInfo(vehicle.plate);
+            }
+        }
+
+        // Set current date and time
+        function setCurrentDateTime() {
+            const now = new Date();
+            const date = now.toISOString().split('T')[0];
+            const time = now.toTimeString().slice(0, 5);
+            
+            document.getElementById('exitDate').value = date;
+            document.getElementById('exitTime').value = time;
+            document.getElementById('entryDate').value = date;
+            document.getElementById('entryTime').value = time;
+        }
+
+        // Show status message
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' : 
+                type === 'error' ? 'bg-red-500 text-white' : 
+                'bg-blue-500 text-white'
+            }`;
+            statusEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Navigation functions
+        function showExitForm() {
+            exitForm.classList.remove('hidden');
+            entryForm.classList.add('hidden');
+            exitBtn.classList.add('btn-primary');
+            exitBtn.classList.remove('btn-secondary');
+            entryBtn.classList.add('btn-secondary');
+            entryBtn.classList.remove('btn-primary');
+            updateExitDropdown();
+        }
+
+        function showEntryForm() {
+            entryForm.classList.remove('hidden');
+            exitForm.classList.add('hidden');
+            entryBtn.classList.add('btn-primary');
+            entryBtn.classList.remove('btn-secondary');
+            exitBtn.classList.add('btn-secondary');
+            exitBtn.classList.remove('btn-primary');
+            updateEntryDropdown();
+        }
+
+        // ✅ Enhanced License Plates Loading
+        async function loadLicensePlatesEnhanced() {
+            try {
+                uiManager.showStatus('📋 กำลังโหลดข้อมูลป้ายทะเบียน...', 'info');
+                
+                const data = await sheetsManager.getData('license plate', true);
+                licensePlates = [];
+                
+                data.forEach(row => {
+                    if (row.col0) {
+                        const plate = row.col0;
+                        const province = row.col1 || '';
+                        const branch = row.col2 || '';
+                        
+                        const vehicleData = {
+                            plate: plate,
+                            province: province,
+                            branch: branch,
+                            display: `${plate} - ${province} (${branch})`
+                        };
+                        
+                        licensePlates.push(vehicleData);
+                        
+                        // Initialize vehicle in state manager
+                        vehicleStateManager.updateVehicle(plate, {
+                            ...vehicleData,
+                            status: 'in' // Default status
+                        });
+                        
+                        // Legacy compatibility
+                        vehicleStatus[plate] = 'in';
+                    }
+                });
+                
+                console.log(`✅ Loaded ${licensePlates.length} license plates`);
+                
+                // After loading license plates, check vehicle status from data sheet
+                await checkVehicleStatusFromSheetEnhanced();
+                
+                return licensePlates;
+                
+            } catch (error) {
+                console.error('❌ Error loading license plates:', error);
+                uiManager.showStatus('❌ เกิดข้อผิดพลาดในการโหลดข้อมูลป้ายทะเบียน', 'error');
+                throw error;
+            }
+        }
+
+        // Legacy function for compatibility
+        function loadLicensePlates() {
+            return loadLicensePlatesEnhanced();
+        }
+
+        // ✅ Enhanced Vehicle Status Checking
+        async function checkVehicleStatusFromSheetEnhanced() {
+            try {
+                uiManager.showStatus('🔍 กำลังตรวจสอบสถานะรถจากข้อมูล...', 'info');
+                
+                const data = await sheetsManager.getData('data', true);
+                
+                // Reset vehicle status and last trip data
+                licensePlates.forEach(vehicle => {
+                    vehicleStatus[vehicle.plate] = 'in'; // Default to in company
+                    vehicleStateManager.updateVehicle(vehicle.plate, { status: 'in' });
+                });
+                lastTripData = {};
+                
+                if (data && data.length > 0) {
+                    // Process data rows to find latest status for each vehicle
+                    const vehicleLatestData = {};
+                    
+                    data.forEach(row => {
+                        if (row.col0 && row.col1) {
+                            const timestamp = row.col0;
+                            const licensePlate = row.col1;
+                            const exitDate = row.col2 || '';
+                            const exitTime = row.col3 || '';
+                            const reason = row.col4 || '';
+                            const exitMileage = row.col5 || '';
+                            const exitEnergy = row.col6 || '';
+                            const entryDate = row.col7 || '';
+                            const entryTime = row.col8 || '';
+                            const entryMileage = row.col9 || '';
+                            const entryEnergy = row.col10 || '';
+                            const status = row.col11 || '';
+                            const userName = row.col12 || ''; // เพิ่มตรงนี้
+
+                            if (licensePlate && status) {
+                                const recordTime = new Date(timestamp);
+                                if (!vehicleLatestData[licensePlate] || 
+                                    recordTime > new Date(vehicleLatestData[licensePlate].timestamp)) {
+                                    vehicleLatestData[licensePlate] = {
+                                        timestamp: timestamp,
+                                        exitDate: exitDate,
+                                        exitTime: exitTime,
+                                        reason: reason,
+                                        exitMileage: exitMileage,
+                                        exitEnergy: exitEnergy,
+                                        entryDate: entryDate,
+                                        entryTime: entryTime,
+                                        entryMileage: entryMileage,
+                                        entryEnergy: entryEnergy,
+                                        status: status,
+                                        userName: userName // เพิ่มตรงนี้
+                                    };
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Update vehicle status based on latest data from Column L
+                    Object.keys(vehicleLatestData).forEach(plate => {
+                        const latestData = vehicleLatestData[plate];
+                        
+                        if (latestData.status === 'ออก') {
+                            vehicleStatus[plate] = 'out';
+                            const tripData = {
+                                exitDate: latestData.exitDate,
+                                exitTime: latestData.exitTime,
+                                reason: latestData.reason,
+                                exitMileage: latestData.exitMileage,
+                                exitEnergy: latestData.exitEnergy,
+                                timestamp: latestData.timestamp,
+                                userName: latestData.userName // เพิ่มตรงนี้
+                            };
+                            lastTripData[plate] = tripData;
+                            vehicleStateManager.updateVehicle(plate, {
+                                status: 'out',
+                                lastTrip: tripData
+                            });
+                        } else if (latestData.status === 'เข้า') {
+                            vehicleStatus[plate] = 'in';
+                            delete lastTripData[plate];
+                            vehicleStateManager.updateVehicle(plate, {
+                                status: 'in',
+                                lastTrip: null
+                            });
+                        }
+                    });
+                    
+                    licensePlates.forEach(vehicle => {
+                        if (!vehicleLatestData[vehicle.plate]) {
+                            vehicleStatus[vehicle.plate] = 'in';
+                            vehicleStateManager.updateVehicle(vehicle.plate, { status: 'in' });
+                        }
+                    });
+                }
+                
+                updateDropdowns();
+                updateStatusDisplay();
+                
+                const outCount = Object.values(vehicleStatus).filter(status => status === 'out').length;
+                const inCount = Object.values(vehicleStatus).filter(status => status === 'in').length;
+                const totalVehicles = licensePlates.length;
+                
+                uiManager.showStatus(`✅ ตรวจสอบสถานะเรียบร้อย - รถในบริษัท: ${inCount}/${totalVehicles} คัน, รถออกไป: ${outCount}/${totalVehicles} คัน`, 'success');
+                
+                console.log('✅ Vehicle Status Updated:', vehicleStatus);
+                console.log('✅ Last Trip Data:', lastTripData);
+                
+                return { inCount, outCount, totalVehicles };
+                
+            } catch (error) {
+                console.error('❌ Error checking vehicle status:', error);
+                updateDropdowns();
+                uiManager.showStatus('❌ ไม่สามารถตรวจสอบสถานะรถได้ ใช้ข้อมูลเริ่มต้น', 'error');
+                throw error;
+            }
+        }
+
+        // Legacy function for compatibility
+        function checkVehicleStatusFromSheet() {
+            return checkVehicleStatusFromSheetEnhanced().catch(error => {
+                console.error('Legacy function error:', error);
+            });
+        }
+
+        // Update status display in the UI
+        function updateStatusDisplay() {
+            // Update button text with counts
+            const outCount = Object.values(vehicleStatus).filter(status => status === 'out').length;
+            const inCount = Object.values(vehicleStatus).filter(status => status === 'in').length;
+            
+            exitBtn.innerHTML = `🚗➡️ บันทึกรถออก <span class="text-sm opacity-75">(${inCount} คัน)</span>`;
+            entryBtn.innerHTML = `➡️🚗 บันทึกรถเข้า <span class="text-sm opacity-75">(${outCount} คัน)</span>`;
+        }
+
+        // Update dropdowns based on vehicle status
+        function updateDropdowns() {
+            // Clear the input fields when updating
+            document.getElementById('exitLicensePlateInput').value = '';
+            document.getElementById('exitLicensePlate').value = '';
+            document.getElementById('entryLicensePlateInput').value = '';
+            document.getElementById('entryLicensePlate').value = '';
+            
+            // Hide dropdown lists
+            document.getElementById('exitDropdownList').classList.add('hidden');
+            document.getElementById('entryDropdownList').classList.add('hidden');
+            
+            // Update the current form's dropdown if it's visible
+            if (!exitForm.classList.contains('hidden')) {
+                updateExitDropdown();
+            }
+            if (!entryForm.classList.contains('hidden')) {
+                updateEntryDropdown();
+            }
+        }
+
+        // Update exit dropdown to show only vehicles that are "in"
+        function updateExitDropdown() {
+            const availableVehicles = licensePlates.filter(vehicle => 
+                vehicleStatus[vehicle.plate] === 'in'
+            );
+            
+            // Show count in form title
+            const exitFormTitle = document.querySelector('#exitForm h2');
+            const inCount = availableVehicles.length;
+            exitFormTitle.innerHTML = `📝 บันทึกรถออก <span class="text-sm text-gray-600">(รถในบริษัท: ${inCount} คัน)</span>`;
+        }
+
+        // Update entry dropdown to show only vehicles that are "out"
+        function updateEntryDropdown() {
+            const availableVehicles = licensePlates.filter(vehicle => 
+                vehicleStatus[vehicle.plate] === 'out'
+            );
+            
+            // Show count in form title
+            const entryFormTitle = document.querySelector('#entryForm h2');
+            const outCount = availableVehicles.length;
+            entryFormTitle.innerHTML = `📝 บันทึกรถเข้า <span class="text-sm text-gray-600">(รถที่ออกไป: ${outCount} คัน)</span>`;
+        }
+
+        // ✅ Enhanced Date/Time Formatting Functions (using DateTimeUtils)
+        function formatDateThai(dateString) {
+            return DateTimeUtils.formatDateThai(dateString);
+        }
+
+        function formatTimeThai(timeString) {
+            return DateTimeUtils.formatTimeThai(timeString);
+        }
+
+        function formatTimeLastTrip(timeString) {
+            return DateTimeUtils.formatTimeThai(timeString);
+        }
+
+        // ✅ Enhanced Last Trip Information Display
+        function showLastTripInfo(data = null) {
+            const infoDiv = document.getElementById('lastTripInfo');
+            if (data) {
+                document.getElementById('lastDate').textContent = DateTimeUtils.formatDateThai(data.exitDate);
+                document.getElementById('lastTime').textContent = DateTimeUtils.formatTimeThai(data.exitTime);
+                document.getElementById('lastMileage').textContent = data.exitMileage || '';
+                document.getElementById('lastEnergy').textContent = data.exitEnergy || '';
+                document.getElementById('lastReason').textContent = data.reason || ''; // แก้ไขตรงนี้
+                document.getElementById('lastUser').textContent = ValidationUtils.sanitizeInput(data.userName) || '';
+                if (data.timestamp) {
+                    const timeAgo = DateTimeUtils.calculateTimeDifference(data.timestamp);
+                    document.getElementById('timeAgo').textContent = timeAgo;
+                } else {
+                    document.getElementById('timeAgo').textContent = '';
+                }
+                infoDiv.classList.remove('hidden');
+                infoDiv.style.animation = 'fadeIn 0.3s ease-in';
+            } else {
+                // กรณีไม่มีข้อมูล
+                document.getElementById('lastDate').textContent = '';
+                document.getElementById('lastTime').textContent = '';
+                document.getElementById('lastMileage').textContent = '';
+                document.getElementById('lastEnergy').textContent = '';
+                document.getElementById('lastReason').textContent = '';
+                document.getElementById('lastUser').textContent = '';
+                document.getElementById('timeAgo').textContent = '';
+                infoDiv.classList.add('hidden');
+            }
+        }
+
+        // ดึงข้อมูลล่าสุดของรถแต่ละคันจาก sheet:data แบบ real-time
+        async function fetchAndShowLastTripInfo(plate) {
+            if (!plate) {
+                showLastTripInfo(null); // แสดงค่าว่าง
+                return;
+            }
+            try {
+                uiManager.showStatus('🔍 กำลังดึงข้อมูลล่าสุด...', 'info', 1000);
+                // ดึงข้อมูล sheet:data แบบไม่ใช้ cache
+                const data = await sheetsManager.getData('data', false);
+                // หาแถวล่าสุดที่ตรงกับป้ายทะเบียนและสถานะ "ออก"
+                let latestRow = null;
+                let latestTimestamp = null;
+                data.forEach(row => {
+                    if (row.col1 === plate && row.col11 === 'ออก') {
+                        const ts = new Date(row.col0);
+                        if (!latestTimestamp || ts > latestTimestamp) {
+                            latestTimestamp = ts;
+                            latestRow = row;
+                        }
+                    }
+                });
+                if (latestRow) {
+                    // ส่งข้อมูลไปแสดง
+                    showLastTripInfo({
+                        exitDate: latestRow.col2 || '',
+                        exitTime: latestRow.col3 || '',
+                        exitMileage: latestRow.col5 || '',
+                        exitEnergy: latestRow.col6 || '',
+                        reason: latestRow.col4 || '',
+                        userName: latestRow.col12 || '',
+                        timestamp: latestRow.col0 || ''
+                    });
+                } else {
+                    showLastTripInfo(null); // ไม่พบข้อมูล
+                }
+            } catch (err) {
+                console.error('❌ Error fetching last trip info:', err);
+                showLastTripInfo(null);
+            }
+        }
+
+        // ✅ Enhanced Form Submission Handlers
+        async function handleExitSubmitEnhanced(e) {
+            e.preventDefault();
+            
+            try {
+                uiManager.setLoading('exit', true, 'กำลังบันทึกข้อมูลรถออก...');
+                
+                const formData = {
+                    status: 'exit',
+                    licensePlate: document.getElementById('exitLicensePlate').value,
+                    date: document.getElementById('exitDate').value,
+                    time: document.getElementById('exitTime').value,
+                    reason: document.getElementById('exitReason').value,
+                    mileage: document.getElementById('exitMileage').value,
+                    energy: document.getElementById('exitEnergy').value,
+                    user: document.getElementById('exitUserInput').value // เพิ่มชื่อผู้ใช้งาน
+                };
+                
+                // ✅ Enhanced Validation
+                const plateValidation = ValidationUtils.validateLicensePlate(formData.licensePlate);
+                if (!plateValidation.valid) {
+                    throw new Error(plateValidation.error);
+                }
+                
+                const mileageValidation = ValidationUtils.validateMileage(formData.mileage);
+                if (!mileageValidation.valid) {
+                    throw new Error(mileageValidation.error);
+                }
+                
+                const energyValidation = ValidationUtils.validateEnergy(formData.energy);
+                if (!energyValidation.valid) {
+                    throw new Error(energyValidation.error);
+                }
+                
+                if (!formData.reason.trim()) {
+                    throw new Error('กรุณาระบุเหตุผลในการใช้รถ');
+                }
+                
+                // บันทึกชื่อผู้ใช้งานใหม่ถ้ายังไม่มีใน userList
+                if (formData.user && !userList.includes(formData.user)) {
+                    await sheetsManager.submitData({
+                        status: 'addUser',
+                        user: formData.user
+                    });
+                    userList.push(formData.user);
+                }
+
+                // Submit data using enhanced manager
+                await sheetsManager.submitData(formData);
+                
+                // Update vehicle status
+                vehicleStatus[formData.licensePlate] = 'out';
+                
+                // Store last trip data
+                const tripData = {
+                    exitDate: formData.date,
+                    exitTime: formData.time,
+                    reason: formData.reason,
+                    exitMileage: formData.mileage,
+                    exitEnergy: formData.energy,
+                    timestamp: new Date().toISOString()
+                };
+                
+                lastTripData[formData.licensePlate] = tripData;
+                
+                // Update state manager
+                vehicleStateManager.updateVehicle(formData.licensePlate, {
+                    status: 'out',
+                    lastTrip: tripData
+                });
+                
+                // Clear cache to force refresh on next load
+                dataCache.clear('sheet_data');
+                
+                updateDropdowns();
+                document.getElementById('exitFormData').reset();
+                setCurrentDateTime();
+                
+                uiManager.showStatus('✅ บันทึกข้อมูลรถออกเรียบร้อย', 'success');
+                
+            } catch (error) {
+                console.error('❌ Exit form error:', error);
+                uiManager.showStatus(`❌ ${error.message}`, 'error');
+            } finally {
+                uiManager.setLoading('exit', false);
+            }
+        }
+
+        async function handleEntrySubmitEnhanced(e) {
+            e.preventDefault();
+            
+            try {
+                uiManager.setLoading('entry', true, 'กำลังบันทึกข้อมูลรถเข้า...');
+                
+                const formData = {
+                    status: 'entry',
+                    licensePlate: document.getElementById('entryLicensePlate').value,
+                    date: document.getElementById('entryDate').value,
+                    time: document.getElementById('entryTime').value,
+                    mileage: document.getElementById('entryMileage').value,
+                    energy: document.getElementById('entryEnergy').value
+                };
+                
+                // ✅ Enhanced Validation
+                const plateValidation = ValidationUtils.validateLicensePlate(formData.licensePlate);
+                if (!plateValidation.valid) {
+                    throw new Error(plateValidation.error);
+                }
+                
+                // Validate mileage against last trip data
+                const lastTrip = lastTripData[formData.licensePlate];
+                const lastMileage = lastTrip ? parseFloat(lastTrip.exitMileage) : null;
+                
+                const mileageValidation = ValidationUtils.validateMileage(formData.mileage, lastMileage);
+                if (!mileageValidation.valid) {
+                    throw new Error(mileageValidation.error);
+                }
+                
+                const energyValidation = ValidationUtils.validateEnergy(formData.energy);
+                if (!energyValidation.valid) {
+                    throw new Error(energyValidation.error);
+                }
+                
+                // Submit data using enhanced manager
+                await sheetsManager.submitData(formData);
+                
+                // Update vehicle status
+                vehicleStatus[formData.licensePlate] = 'in';
+                
+                // Clear last trip data
+                delete lastTripData[formData.licensePlate];
+                
+                // Update state manager
+                vehicleStateManager.updateVehicle(formData.licensePlate, {
+                    status: 'in',
+                    lastTrip: null
+                });
+                
+                // Clear cache to force refresh on next load
+                dataCache.clear('sheet_data');
+                
+                updateDropdowns();
+                document.getElementById('entryFormData').reset();
+                document.getElementById('lastTripInfo').classList.add('hidden');
+                setCurrentDateTime();
+                
+                uiManager.showStatus('✅ บันทึกข้อมูลรถเข้าเรียบร้อย', 'success');
+                
+            } catch (error) {
+                console.error('❌ Entry form error:', error);
+                uiManager.showStatus(`❌ ${error.message}`, 'error');
+            } finally {
+                uiManager.setLoading('entry', false);
+            }
+        }
+
+        // Legacy functions for compatibility
+        function handleExitSubmit(e) {
+            return handleExitSubmitEnhanced(e);
+        }
+
+        function handleEntrySubmit(e) {
+            return handleEntrySubmitEnhanced(e);
+        }
+
+        // Send data to Google Apps Script
+        function sendToGoogleScript(data) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'callback_' + Date.now();
+                const script = document.createElement('script');
+                
+                // Set timeout for request
+                const timeoutId = setTimeout(() => {
+                    document.head.removeChild(script);
+                    delete window[callbackName];
+                    reject(new Error('Request timeout'));
+                }, 15000);
+                
+                // Create callback function
+                window[callbackName] = function(response) {
+                    clearTimeout(timeoutId);
+                    document.head.removeChild(script);
+                    delete window[callbackName];
+                    
+                    if (response && response.success) {
+                        resolve(response);
+                    } else {
+                        reject(new Error(response ? response.error : 'Unknown error'));
+                    }
+                };
+                
+                // Create script URL with data
+                const params = new URLSearchParams();
+                Object.keys(data).forEach(key => {
+                    params.append(key, data[key]);
+                });
+                params.append('callback', callbackName);
+                
+                script.src = `${SCRIPT_URL}?${params.toString()}`;
+                script.onerror = () => {
+                    clearTimeout(timeoutId);
+                    document.head.removeChild(script);
+                    delete window[callbackName];
+                    reject(new Error('Network error'));
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+
+        // ✅ Enhanced Refresh Functions
+        async function refreshDataEnhanced() {
+            try {
+                uiManager.showStatus('🔄 กำลังรีเฟรชข้อมูล...', 'info');
+                
+                // Update refresh button state
+                const refreshButton = document.getElementById('refreshBtn');
+                const originalText = refreshButton.innerHTML;
+                refreshButton.innerHTML = '🔄 กำลังรีเฟรช...';
+                refreshButton.disabled = true;
+                refreshButton.classList.add('opacity-50', 'cursor-not-allowed');
+                
+                // Clear cache to force fresh data
+                dataCache.clear();
+                
+                // Clear current data
+                licensePlates = [];
+                vehicleStatus = {};
+                lastTripData = {};
+                
+                // Reload all data with enhanced error handling
+                await loadLicensePlatesEnhanced();
+                
+                // Reset refresh button
+                refreshButton.innerHTML = originalText;
+                refreshButton.disabled = false;
+                refreshButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                uiManager.showStatus('✅ รีเฟรชข้อมูลเรียบร้อย', 'success');
+                
+            } catch (error) {
+                console.error('❌ Refresh error:', error);
+                
+                // Reset refresh button
+                const refreshButton = document.getElementById('refreshBtn');
+                refreshButton.innerHTML = '🔄 รีเฟรช';
+                refreshButton.disabled = false;
+                refreshButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                uiManager.showStatus('❌ เกิดข้อผิดพลาดในการรีเฟรช', 'error');
+            }
+        }
+
+        // ✅ Enhanced Auto Refresh with Smart Caching
+        function startAutoRefreshEnhanced() {
+            let refreshInterval;
+            let isOnline = navigator.onLine;
+            
+            const performAutoRefresh = async () => {
+                try {
+                    console.log('🔄 Auto refreshing data...');
+                    
+                    // Only refresh status data, not license plates (unless cache is expired)
+                    const shouldRefreshLicensePlates = dataCache.isExpired('sheet_license plate');
+                    
+                    if (shouldRefreshLicensePlates) {
+                        console.log('📋 License plates cache expired, refreshing...');
+                        await loadLicensePlatesEnhanced();
+                    } else {
+                        console.log('🔍 Refreshing vehicle status only...');
+                        await checkVehicleStatusFromSheetEnhanced();
+                    }
+                    
+                    console.log('✅ Auto refresh completed');
+                    
+                } catch (error) {
+                    console.error('❌ Auto refresh failed:', error);
+                    
+                    // Show warning only if we're online
+                    if (navigator.onLine) {
+                        uiManager.showStatus('⚠️ การอัปเดตอัตโนมัติล้มเหลว', 'warning', 2000);
+                    }
+                }
+            };
+            
+            // Start initial interval
+            refreshInterval = setInterval(performAutoRefresh, 5 * 60 * 1000); // 5 minutes
+            
+            // Handle online/offline events
+            window.addEventListener('online', () => {
+                if (!isOnline) {
+                    console.log('🌐 Back online, resuming auto refresh');
+                    isOnline = true;
+                    uiManager.showStatus('🌐 กลับมาออนไลน์แล้ว', 'success', 2000);
+                    
+                    // Perform immediate refresh when back online
+                    setTimeout(performAutoRefresh, 1000);
+                    
+                    // Restart interval if needed
+                    if (!refreshInterval) {
+                        refreshInterval = setInterval(performAutoRefresh, 5 * 60 * 1000);
+                    }
+                }
+            });
+            
+            window.addEventListener('offline', () => {
+                if (isOnline) {
+                    console.log('📴 Gone offline, pausing auto refresh');
+                    isOnline = false;
+                    uiManager.showStatus('📴 ออฟไลน์ - ใช้ข้อมูลที่เก็บไว้', 'warning', 3000);
+                }
+            });
+            
+            // Cleanup function
+            return () => {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
+            };
+        }
+
+        // Legacy functions for compatibility
+        function refreshData() {
+            return refreshDataEnhanced();
+        }
+
+        function startAutoRefresh() {
+            return startAutoRefreshEnhanced();
+        }
+
+        // โหลดรายชื่อผู้ใช้งานจาก sheet:User
+        async function loadUserList() {
+            try {
+                const data = await sheetsManager.getData('User', true);
+                userList = data.map(row => row.col0).filter(Boolean);
+            } catch (e) {
+                userList = [];
+            }
+        }
+
+        // setup dropdown สำหรับชื่อผู้ใช้งาน
+        function setupUserDropdown() {
+            const input = document.getElementById('exitUserInput');
+            const hiddenInput = document.getElementById('exitUser');
+            const dropdownList = document.getElementById('exitUserDropdownList');
+            let filtered = [];
+            let selectedIndex = -1;
+
+            input.addEventListener('input', function() {
+                const search = this.value.toLowerCase();
+                filtered = userList.filter(name => name.toLowerCase().includes(search));
+                dropdownList.innerHTML = '';
+                selectedIndex = -1;
+                if (filtered.length > 0 && search) {
+                    filtered.forEach((name, idx) => {
+                        const item = document.createElement('div');
+                        item.className = 'dropdown-item';
+                        item.textContent = name;
+                        item.addEventListener('click', () => {
+                            input.value = name;
+                            hiddenInput.value = name;
+                            dropdownList.classList.add('hidden');
+                        });
+                        dropdownList.appendChild(item);
+                    });
+                    dropdownList.classList.remove('hidden');
+                } else {
+                    dropdownList.classList.add('hidden');
+                }
+                hiddenInput.value = '';
+            });
+
+            input.addEventListener('focus', function() {
+                filtered = userList;
+                dropdownList.innerHTML = '';
+                filtered.forEach((name, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.textContent = name;
+                    item.addEventListener('click', () => {
+                        input.value = name;
+                        hiddenInput.value = name;
+                        dropdownList.classList.add('hidden');
+                    });
+                    dropdownList.appendChild(item);
+                });
+                if (filtered.length > 0) dropdownList.classList.remove('hidden');
+            });
+
+            input.addEventListener('blur', function() {
+                setTimeout(() => dropdownList.classList.add('hidden'), 200);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (filtered.length === 0) return;
+                if (e.key === 'ArrowDown') {
+                    selectedIndex = Math.min(selectedIndex + 1, filtered.length - 1);
+                } else if (e.key === 'ArrowUp') {
+                    selectedIndex = Math.max(selectedIndex - 1, 0);
+                } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                    input.value = filtered[selectedIndex];
+                    hiddenInput.value = filtered[selectedIndex];
+                    dropdownList.classList.add('hidden');
+                }
+                // highlight
+                Array.from(dropdownList.children).forEach((item, idx) => {
+                    item.classList.toggle('selected', idx === selectedIndex);
+                });
+            });
+
+            input.addEventListener('change', function() {
+                hiddenInput.value = input.value;
+            });
+        }
+
+        // เรียกใน DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', async function() {
+            // ...existing code...
+            await loadUserList();
+            setupUserDropdown();
+            // ...existing code...
+        });
+    </script>
+    <!-- ===== Cloudflare/Anti-bot Script (ถ้ามีความจำเป็น) ===== -->
+    <script>
+        (function(){
+            function c(){
+                var b=a.contentDocument||a.contentWindow.document;
+                if(b){
+                    var d=b.createElement('script');
+                    d.innerHTML="window.__CF$cv$params={r:'96be374df6812db4',t:'MTc1NDY0Nzc0NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+                    b.getElementsByTagName('head')[0].appendChild(d)
+                }
+            }
+            if(document.body){
+                var a=document.createElement('iframe');
+                a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';
+                document.body.appendChild(a);
+                if('loading'!==document.readyState)c();
+                else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);
+                else{
+                    var e=document.onreadystatechange||function(){};
+                    document.onreadystatechange=function(b){e(b); 'loading'!==document.readyState&&(document.onreadystatechange=e,c())}
+                }
+            }
+        })();
+    </script>
+</body>
+</html>
